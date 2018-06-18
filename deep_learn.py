@@ -1,68 +1,52 @@
 import numpy as np
-from keras.datasets import imdb
 from keras import models
 from keras import layers
 from keras import optimizers
 from keras import losses
 from keras import metrics
+from keras import initializers
 import matplotlib.pyplot as plt
-import csv
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
 
-num_words = 10000
+# configuration
+epochs = 20
+batch_size = 32
+val_size = 100
+units = 16
 
-(train_data, train_labels), (test_data, test_labels) = sklearn.datasets.load_breast_cancer(num_words=num_words)
+dataset = datasets.load_breast_cancer()
+X = dataset.data
+y = dataset.target
 
-print(max([max(sequence) for sequence in train_data]))
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=12345)
 
+print(x_train[0], x_test[0], y_train[0], y_test[0])
 
-def vectorize_sequences(sequences, dimension=num_words):
-    results = np.zeros((len(sequences), dimension))
-    for i, sequence in enumerate(sequences):
-        results[i, sequence] = 1.
-    return results
+y_train = np.asarray(y_train).astype('float32')
+y_test = np.asarray(y_test).astype('float32')
 
-x_train = vectorize_sequences(train_data)
-x_test = vectorize_sequences(test_data)
-y_train = np.asarray(train_labels).astype('float32')
-y_test = np.asarray(test_labels).astype('float32')
+model = None
 
 model = models.Sequential()
-model.add(layers.Dense(16, activation='relu', input_shape=(num_words,)))
-model.add(layers.Dense(16, activation='relu'))
+model.add(layers.Dense(units, activation='relu', input_shape=(30,), kernel_initializer='random_uniform',
+                       bias_initializer=initializers.Constant(value=0.5)))
+model.add(layers.Dense(4, activation='relu'))
 model.add(layers.Dense(1, activation='sigmoid'))
 
 model.compile(optimizer=optimizers.RMSprop(lr=0.001),
               loss=losses.binary_crossentropy,
               metrics=[metrics.binary_accuracy])
 
-x_val = x_train[:10000]
-partial_x_train = x_train[10000:]
-y_val = y_train[:10000]
-partial_y_train = y_train[10000:]
+x_val = x_train[:val_size]
+partial_x_train = x_train[val_size:]
+y_val = y_train[:val_size]
+partial_y_train = y_train[val_size:]
 
 history = model.fit(partial_x_train,
                     partial_y_train,
-                    epochs=5,
-                    batch_size=512,
+                    epochs=epochs,
+                    batch_size=batch_size,
                     validation_data=(x_val, y_val))
 
 model.predict(x_test)
-
-# list all data in history
-print(history.history.keys())
-# summarize history for accuracy
-plt.plot(history.history['binary_accuracy']) # changed from acc
-plt.plot(history.history['val_binary_accuracy']) # changed from val_acc
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
-# summarize history for loss
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
-plt.show()
